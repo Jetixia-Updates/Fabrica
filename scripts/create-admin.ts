@@ -3,48 +3,34 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-async function createAdminUser() {
-  try {
-    console.log("Creating admin user...");
+async function main() {
+  const hashedPassword = await bcrypt.hash("Admin@123456", 10);
 
-    const adminEmail = "admin@fabrica.com";
-    const adminPassword = "Admin@123456"; // Change this!
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@fabrica.com" },
+    update: {},
+    create: {
+      email: "admin@fabrica.com",
+      password: hashedPassword,
+      firstName: "Admin",
+      lastName: "User",
+      role: "ADMIN",
+      phone: "+20123456789",
+    },
+  });
 
-    // Check if admin already exists
-    const existingAdmin = await prisma.user.findUnique({
-      where: { email: adminEmail },
-    });
-
-    if (existingAdmin) {
-      console.log("Admin user already exists!");
-      return;
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
-
-    // Create admin user
-    const admin = await prisma.user.create({
-      data: {
-        email: adminEmail,
-        password: hashedPassword,
-        firstName: "Admin",
-        lastName: "User",
-        role: "ADMIN",
-        phone: "+20 1000000000",
-      },
-    });
-
-    console.log("✅ Admin user created successfully!");
-    console.log("📧 Email:", adminEmail);
-    console.log("🔑 Password:", adminPassword);
-    console.log("⚠️  Please change the password after first login!");
-    console.log("\nAdmin user ID:", admin.id);
-  } catch (error) {
-    console.error("Error creating admin user:", error);
-  } finally {
-    await prisma.$disconnect();
-  }
+  console.log("Admin user created:", admin);
+  console.log("\nAdmin Credentials:");
+  console.log("Email: admin@fabrica.com");
+  console.log("Password: Admin@123456");
 }
 
-createAdminUser();
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

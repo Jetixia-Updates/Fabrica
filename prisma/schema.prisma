@@ -34,7 +34,6 @@ enum PaymentStatus {
   REFUNDED
 }
 
-// User Management
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
@@ -43,25 +42,13 @@ model User {
   lastName  String
   phone     String?
   role      Role     @default(CUSTOMER)
-  
-  // Profile
   avatar    String?
   bio       String?
-  
-  // Addresses
   addresses Address[]
-  
-  // Orders
   orders    Order[]
-  
-  // Seller related
   sellerProfile SellerProfile?
   sellerProducts Product[] @relation("SellerProducts")
-  
-  // Authentication
   refreshTokens RefreshToken[]
-  
-  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -70,7 +57,6 @@ model Address {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   firstName String
   lastName  String
   phone     String
@@ -80,7 +66,6 @@ model Address {
   zip       String
   country   String
   isDefault Boolean  @default(false)
-  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -91,76 +76,53 @@ model RefreshToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
   expiresAt DateTime
-  
   createdAt DateTime @default(now())
 }
 
-// Seller Profile
 model SellerProfile {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @unique @db.ObjectId
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   shopName  String
   shopDescription String?
   shopLogo  String?
   shopBanner String?
-  
-  // Store info
   rating    Float    @default(5.0)
   totalSales Int     @default(0)
   followers Int      @default(0)
-  
   verified  Boolean  @default(false)
-  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-// Products
 model Product {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   sellerId  String   @db.ObjectId
   seller    User     @relation("SellerProducts", fields: [sellerId], references: [id], onDelete: Cascade)
-  
+  active    Boolean  @default(true)
   name      String
   description String
   category  String
-  
-  // Pricing
+  basePrice Float
   pricePerMeter Float
   pricePerRoll  Float?
-  rollLength    Int?     // Length in meters for a roll
-  
-  // Specifications
-  width     String   // e.g., "145cm"
-  material  String   // e.g., "65% Cotton, 35% Linen"
-  weight    String?  // e.g., "250g/m²"
+  rollLength    Int?
+  width     String
+  material  String
+  weight    String?
   pattern   String   @default("Solid")
-  
-  // Stock & Inventory
   stock     Int      @default(0)
-  moq       Int      @default(1)  // Minimum order quantity
-  
-  // Metadata
+  moq       Int      @default(1)
   rating    Float    @default(0)
   reviews   Int      @default(0)
   sold      Int      @default(0)
-  
-  // Lead time for made-to-order items
-  leadTime  String?  // e.g., "1-2 business days"
-  
-  // Images
-  images    String[] // JSON array of image URLs
-  
-  // Relations
+  leadTime  String?
+  images    String[]
   variants  Variant[]
   skus      SKU[]
   inventories Inventory[]
   orderItems OrderItem[]
   cartItems CartItem[]
-  
-  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -169,88 +131,60 @@ model Variant {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   productId String   @db.ObjectId
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  name      String   // e.g., "Color"
-  value     String   // e.g., "Natural"
-  
+  name      String
+  value     String
   createdAt DateTime @default(now())
-  
-  @@unique([productId, name, value])
 }
 
 model SKU {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   productId String   @db.ObjectId
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
   sku       String   @unique
-  variantCombination String // JSON of variant selections
-  
+  variantCombination String
   createdAt DateTime @default(now())
 }
 
 model Inventory {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  productId String   @unique @db.ObjectId
+  productId String   @db.ObjectId
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  totalMeters    Float     // Total meters in stock
-  totalRolls     Int       @default(0)  // Total complete rolls in stock
-  metersByColor  String    // JSON: { "color": meters }
-  rollsByColor   String    // JSON: { "color": rolls }
-  
+  totalMeters    Float
+  totalRolls     Int       @default(0)
+  metersByColor  String
+  rollsByColor   String
   lastUpdated    DateTime  @updatedAt
 }
 
-// Shopping Cart
 model CartItem {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String
-  
   productId String   @db.ObjectId
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
   quantity  Int
-  unit      String   // "meter" or "roll"
+  unit      String
   color     String?
-  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  @@unique([userId, productId, unit, color])
 }
 
-// Orders
 model Order {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   orderNumber String @unique
   status    OrderStatus @default(PENDING)
-  
-  // Shipping
-  shippingAddress String  // JSON
-  
-  // Items
+  shippingAddress String
   items     OrderItem[]
-  
-  // Pricing
   subtotal  Float
   shipping  Float    @default(0)
   tax       Float
   total     Float
-  
-  // Discount
   couponId  String?  @db.ObjectId
   coupon    Coupon?  @relation(fields: [couponId], references: [id])
   discount  Float    @default(0)
-  
-  // Payment
   paymentMethod PaymentMethod
   payment   Payment?
-  
-  // Timeline
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   shippedAt DateTime?
@@ -261,12 +195,10 @@ model OrderItem {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   orderId   String   @db.ObjectId
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
   productId String   @db.ObjectId
   product   Product  @relation(fields: [productId], references: [id])
-  
   quantity  Int
-  unit      String   // "meter" or "roll"
+  unit      String
   color     String?
   priceAtPurchase Float
 }
@@ -275,51 +207,36 @@ model Payment {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   orderId   String   @unique @db.ObjectId
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
   status    PaymentStatus @default(PENDING)
   method    PaymentMethod
-  
-  // Stripe data
   stripePaymentIntentId String?
   stripeSessionId String?
-  
-  // Amount
   amount    Float
   currency  String   @default("USD")
-  
-  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   paidAt    DateTime?
 }
 
-// Coupons
 model Coupon {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   code      String   @unique
-  
+  usedCount Int      @default(0)
   description String?
-  discountType String // "percentage" or "fixed"
+  discountType String
   discountValue Float
-  
   minOrderAmount Float?
   maxUses   Int?
-  uses      Int      @default(0)
-  
   active    Boolean  @default(true)
   startsAt  DateTime @default(now())
   expiresAt DateTime?
-  
   orders    Order[]
-  
   createdAt DateTime @default(now())
 }
 
-// Admin: Site Settings
 model SiteSettings {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   key       String   @unique
-  value     String   // JSON
-  
+  value     String
   updatedAt DateTime @updatedAt
 }

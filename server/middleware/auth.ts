@@ -2,30 +2,46 @@ import { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../db";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+interface JWTPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
 
-export interface AuthRequest extends Request {
-  userId?: string;
-  userEmail?: string;
-  userRole?: string;
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JWTPayload;
+    }
+  }
 }
 
 export const authenticateToken: RequestHandler = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
       return res.status(401).json({
         success: false,
-        error: "No token provided",
+        error: "Access token required",
       });
     }
 
-    const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      return res.status(500).json({
+        success: false,
+        error: "JWT secret not configured",
+      });
+    }
 
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    
     // Verify user still exists
     const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
+      where: { id: decoded.userId },
+      select: { id: true, email: true, role: true },
     });
 
     if (!user) {
@@ -35,30 +51,30 @@ export const authenticateToken: RequestHandler = async (req, res, next) => {
       });
     }
 
-    // Attach user info to request
-    (req as any).userId = decoded.id;
-    (req as any).userEmail = decoded.email;
-    (req as any).userRole = decoded.role;
+    req.user = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    };
 
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid token",
-      });
-    }
-    return res.status(500).json({
+    return res.status(403).json({
       success: false,
-      error: "Authentication failed",
+      error: "Invalid or expired token",
     });
   }
 };
 
 export const requireAdmin: RequestHandler = (req, res, next) => {
-  const userRole = (req as any).userRole;
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      error: "Authentication required",
+    });
+  }
 
-  if (userRole !== "ADMIN") {
+  if (req.user.role !== "ADMIN") {
     return res.status(403).json({
       success: false,
       error: "Admin access required",
@@ -69,9 +85,14 @@ export const requireAdmin: RequestHandler = (req, res, next) => {
 };
 
 export const requireSeller: RequestHandler = (req, res, next) => {
-  const userRole = (req as any).userRole;
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      error: "Authentication required",
+    });
+  }
 
-  if (userRole !== "SELLER" && userRole !== "ADMIN") {
+  if (req.user.role !== "SELLER" && req.user.role !== "ADMIN") {
     return res.status(403).json({
       success: false,
       error: "Seller or Admin access required",

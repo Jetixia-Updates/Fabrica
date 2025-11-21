@@ -1,115 +1,98 @@
 # Admin Credentials
 
-## Admin User
-Created on: November 21, 2025
+## Default Admin User
 
-**Email:** `admin@fabrica.com`  
-**Password:** `Admin@123456`  
-**Role:** ADMIN
+**Email:** admin@fabrica.com  
+**Password:** Admin@123456
 
-⚠️ **IMPORTANT:** Please change this password after your first login!
+## System URLs
 
----
+- **Application:** http://localhost:8080
+- **Admin Dashboard:** http://localhost:8080/admin
+- **Login:** http://localhost:8080/login
 
-## How to Login
+## Database
 
-1. Go to `/login` page
-2. Enter the email and password above
-3. Click "Login"
-4. You will be redirected to the home page
-5. Access your account at `/account`
+**MongoDB Atlas:**
+- Connection String: mongodb+srv://Vercel-Admin-Fabrica:vZuKkoTDoqtqqPd3@fabrica.moapaow.mongodb.net/fabrica
+- Database: fabrica
 
----
+## Features
 
-## Admin Capabilities
+### Admin Dashboard
+- User Management (CRM)
+- Product Management (ERP)
+- Order Management
+- Inventory Control
+- Category Management
+- Coupon System
+- Analytics & Reports
+- Site Settings
 
-As an admin, you have access to:
+### Authentication
+- JWT-based authentication
+- Role-based access control (CUSTOMER, SELLER, ADMIN)
+- Refresh token mechanism
+- Secure password hashing with bcrypt
 
-- ✅ View all users (`GET /api/users`)
-- ✅ View any user profile (`GET /api/users/:id`)
-- ✅ Update any user profile (`PUT /api/users/:id`)
-- ✅ Change user roles (`PUT /api/users/:id/role`)
-- ✅ Delete users (`DELETE /api/users/:id`)
-- ✅ Manage products
-- ✅ Manage orders
-- ✅ Full system access
+### API Endpoints
 
----
+#### Authentication
+- POST /api/auth/register - Register new user
+- POST /api/auth/login - Login
+- POST /api/auth/refresh-token - Refresh access token
+- GET /api/auth/me - Get current user
+- POST /api/auth/logout - Logout
 
-## API Endpoints for User Management
+#### Products
+- GET /api/products - Get all products
+- GET /api/products/:id - Get product details
+- POST /api/products - Create product (Seller/Admin)
+- PUT /api/products/:id - Update product (Seller/Admin)
 
-### Get All Users (Admin Only)
-```
-GET /api/users
-Authorization: Bearer {accessToken}
-Query params: ?page=1&limit=20&role=CUSTOMER&search=john
-```
+#### Orders
+- GET /api/orders - Get user orders
+- GET /api/orders/:id - Get order details
+- POST /api/orders - Create order
+- PUT /api/orders/:id/status - Update order status (Seller/Admin)
 
-### Get User by ID
-```
-GET /api/users/:id
-Authorization: Bearer {accessToken}
-```
+## Development
 
-### Update User Profile
-```
-PUT /api/users/:id
-Authorization: Bearer {accessToken}
-Body: {
-  "firstName": "John",
-  "lastName": "Doe",
-  "phone": "+20 1234567890",
-  "bio": "My bio"
-}
-```
-
-### Change User Role (Admin Only)
-```
-PUT /api/users/:id/role
-Authorization: Bearer {accessToken}
-Body: {
-  "role": "SELLER" // CUSTOMER | SELLER | ADMIN
-}
-```
-
-### Delete User (Admin Only)
-```
-DELETE /api/users/:id
-Authorization: Bearer {accessToken}
-```
-
-### Change Password
-```
-POST /api/users/:id/change-password
-Authorization: Bearer {accessToken}
-Body: {
-  "currentPassword": "old password",
-  "newPassword": "new password"
-}
-```
-
-### Address Management
-```
-GET    /api/users/:id/addresses
-POST   /api/users/:id/addresses
-PUT    /api/users/:id/addresses/:addressId
-DELETE /api/users/:id/addresses/:addressId
-Authorization: Bearer {accessToken}
-```
-
----
-
-## Creating Additional Admin Users
-
-Run the script:
 ```bash
+# Install dependencies
+npm install
+
+# Push database schema
+npx prisma db push
+
+# Create admin user
 npx tsx scripts/create-admin.ts
+
+# Start development server
+npm run dev
 ```
 
-Or manually register a user and change their role via API:
+## Production
+
 ```bash
-curl -X PUT http://localhost:8080/api/users/{userId}/role \
-  -H "Authorization: Bearer {adminAccessToken}" \
-  -H "Content-Type: application/json" \
-  -d '{"role":"ADMIN"}'
+# Build application
+npm run build
+
+# Start production server
+npm start
 ```
+
+## Tech Stack
+
+- **Frontend:** React 18 + TypeScript + Vite + TailwindCSS
+- **Backend:** Express.js + Node.js
+- **Database:** MongoDB with Prisma ORM
+- **Authentication:** JWT + bcrypt
+- **UI:** shadcn/ui components + Radix UI
+
+## Notes
+
+- Admin dashboard requires ADMIN role
+- All admin routes are protected with authentication middleware
+- MongoDB connection uses SSL by default
+- JWT tokens expire after 15 minutes (access) and 7 days (refresh)
