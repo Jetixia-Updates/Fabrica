@@ -21,6 +21,19 @@ import {
   handleCreateOrder,
   handleUpdateOrderStatus,
 } from "./routes/orders";
+import {
+  handleGetAllUsers,
+  handleGetUser,
+  handleUpdateUser,
+  handleUpdateUserRole,
+  handleDeleteUser,
+  handleChangePassword,
+  handleGetUserAddresses,
+  handleAddUserAddress,
+  handleUpdateUserAddress,
+  handleDeleteUserAddress,
+} from "./routes/users";
+import { authenticateToken, requireAdmin } from "./middleware/auth";
 
 export function createServer() {
   const app = express();
@@ -56,6 +69,20 @@ export function createServer() {
   app.get("/api/orders/:id", handleGetOrderDetail); // Customer only
   app.post("/api/orders", handleCreateOrder); // Customer
   app.put("/api/orders/:id/status", handleUpdateOrderStatus); // Seller/Admin only
+
+  // ============== User Management Routes ==============
+  app.get("/api/users", authenticateToken, requireAdmin, handleGetAllUsers); // Admin only
+  app.get("/api/users/:id", authenticateToken, handleGetUser); // Admin or own profile
+  app.put("/api/users/:id", authenticateToken, handleUpdateUser); // Admin or own profile
+  app.put("/api/users/:id/role", authenticateToken, requireAdmin, handleUpdateUserRole); // Admin only
+  app.delete("/api/users/:id", authenticateToken, requireAdmin, handleDeleteUser); // Admin only
+  app.post("/api/users/:id/change-password", authenticateToken, handleChangePassword); // Own profile only
+  
+  // Address management
+  app.get("/api/users/:id/addresses", authenticateToken, handleGetUserAddresses);
+  app.post("/api/users/:id/addresses", authenticateToken, handleAddUserAddress);
+  app.put("/api/users/:id/addresses/:addressId", authenticateToken, handleUpdateUserAddress);
+  app.delete("/api/users/:id/addresses/:addressId", authenticateToken, handleDeleteUserAddress);
 
   // Error handler - only for API routes
   app.use((req, res, next) => {
